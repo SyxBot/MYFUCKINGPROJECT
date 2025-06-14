@@ -15,12 +15,12 @@ class StakeTracker {
     console.log('🔧 Initializing Stake Tracker...');
     
     // Setup provider and wallet
-    this.provider = new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
-    this.wallet = new ethers.Wallet(config.blockchain.privateKey, this.provider);
+    this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
+    this.wallet = new ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
     
     // Initialize staking contract
     this.stakingContract = new ethers.Contract(
-      config.blockchain.stakingContract,
+      process.env.STAKING_CONTRACT,
       stakingAbi,
       this.wallet
     );

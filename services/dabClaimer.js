@@ -1,4 +1,3 @@
-
 const { ethers } = require('ethers');
 const config = require('../config');
 
@@ -12,23 +11,23 @@ class DabClaimer {
 
   async initialize() {
     console.log('🔧 Initializing DAB Claimer...');
-    
-    this.provider = new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
-    this.wallet = new ethers.Wallet(config.blockchain.privateKey, this.provider);
-    
+
+    this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
+    this.wallet = new ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
+
     // Initialize DAB token contract (you'll need the ABI)
     // this.dabContract = new ethers.Contract(config.blockchain.dabTokenContract, dabAbi, this.wallet);
-    
+
     console.log('✅ DAB Claimer initialized');
   }
 
   async claimRewards() {
     try {
       console.log('💎 Checking DAB rewards...');
-      
+
       // Mock implementation - replace with actual contract calls
       const pendingRewards = ethers.parseEther('5.0'); // Mock 5 DAB tokens
-      
+
       if (pendingRewards > ethers.parseEther(config.dab.autoClaimThreshold)) {
         console.log('🎯 Claiming DAB rewards...');
         // const tx = await this.dabContract.claimRewards();
@@ -36,7 +35,7 @@ class DabClaimer {
         console.log('✅ DAB rewards claimed successfully');
         return true;
       }
-      
+
       console.log('📊 No DAB rewards to claim yet');
       return false;
     } catch (error) {
@@ -53,7 +52,7 @@ async function autoClaimDAB() {
 }
 
 module.exports = { DabClaimer, autoClaimDAB };
-const config = require('../config');
+
 
 class DabClaimer {
   constructor() {
@@ -65,10 +64,10 @@ class DabClaimer {
 
   async initialize() {
     console.log('🔧 Initializing DAB Claimer...');
-    
-    this.provider = new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
-    this.wallet = new ethers.Wallet(config.blockchain.privateKey, this.provider);
-    
+
+    this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
+    this.wallet = new ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
+
     // Basic ERC20 ABI for DAB token interactions
     const erc20Abi = [
       'function balanceOf(address owner) view returns (uint256)',
@@ -88,7 +87,7 @@ class DabClaimer {
 
   async claimRewards() {
     console.log('💎 Checking DAB rewards...');
-    
+
     try {
       // Check if enough time has passed since last claim
       const now = Date.now();
@@ -99,7 +98,7 @@ class DabClaimer {
 
       const userAddress = await this.wallet.getAddress();
       const pendingRewards = await this.getPendingRewards(userAddress);
-      
+
       console.log(`💰 Pending DAB rewards: ${ethers.formatEther(pendingRewards)} DAB`);
 
       if (pendingRewards >= ethers.parseEther(config.dab.autoClaimThreshold)) {
@@ -126,7 +125,7 @@ class DabClaimer {
   async executeClaim() {
     try {
       console.log('🎯 Claiming DAB rewards...');
-      
+
       const tx = await this.dabContract.claimDailyReward({
         gasLimit: config.dab.maxClaimGas,
         gasPrice: config.blockchain.gasPrice

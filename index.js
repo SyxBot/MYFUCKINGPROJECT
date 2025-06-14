@@ -9,7 +9,7 @@ class VirtualsFarmerBot {
     this.stakeTracker = new StakeTracker();
     this.dabClaimer = new DabClaimer();
     this.tradeSimulator = new TradeSimulator();
-    this.telegramBot = config.telegram.enabled ? new TelegramBot() : null;
+    this.telegramBot = config.telegram.token ? new TelegramBot() : null;
     this.isRunning = false;
   }
 
@@ -53,7 +53,7 @@ class VirtualsFarmerBot {
         await this.tradeSimulator.runSimulations();
 
         // Wait before next cycle
-        await this.sleep(config.bot.cycleInterval);
+        await this.sleep(60000); // 1 minute
 
       } catch (error) {
         console.error('❌ Error in main loop:', error);

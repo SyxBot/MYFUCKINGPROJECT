@@ -1,4 +1,3 @@
-
 module.exports = {
   // Bot settings
   bot: {
@@ -9,7 +8,7 @@ module.exports = {
 
   // Blockchain settings
   blockchain: {
-    rpcUrl: process.env.RPC_URL || 'https://mainnet.infura.io/v3/YOUR_INFURA_KEY',
+    rpcUrl: process.env.RPC_URL || '',
     privateKey: process.env.PRIVATE_KEY || '',
     stakingContract: process.env.STAKING_CONTRACT || '0x...',
     dabTokenContract: process.env.DAB_TOKEN_CONTRACT || '0x...',
@@ -58,5 +57,6 @@ module.exports = {
     level: 'info',
     logFile: './bot.log',
     maxLogSize: '10MB'
-  }
+  },
+  walletAddress: '0xf909...6397'
 };
