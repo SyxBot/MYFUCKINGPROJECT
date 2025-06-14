@@ -3,7 +3,7 @@ const { rpcUrl, walletAddress } = require('../config');
 const stakingAbi = require('../abi/staking.json');
 
 // Virtuals staking contract on Base mainnet
-const STAKING_CONTRACT_ADDRESS = process.env.STAKING_CONTRACT || '0x123456789abcdef123456789abcdef1234567890'; // Replace with actual Virtuals contract
+const STAKING_CONTRACT_ADDRESS = process.env.STAKING_CONTRACT || '0x0b3e328455c4059EEb9e3f84b5543F74E24e7E1b';
 
 class StakeTracker {
   constructor() {
