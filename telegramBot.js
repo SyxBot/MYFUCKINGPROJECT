@@ -61,6 +61,15 @@ class TelegramBot {
     await this.sendMessage(message);
   }
 
+  async sendDailySummary() {
+    if (!config.telegram.enabled) {
+      return;
+    }
+    
+    const summary = `📊 Daily Summary\n🏦 Stakes checked\n💎 DAB rewards processed\n📈 Trade opportunities analyzed\n⏰ ${new Date().toLocaleString()}`;
+    await this.sendMessage(summary);
+  }
+
   async stop() {
     if (!config.telegram.enabled) {
       return;

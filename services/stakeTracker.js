@@ -113,4 +113,10 @@ class StakeTracker {
   }
 }
 
-module.exports = StakeTracker;
+async function trackStakes() {
+  const tracker = new StakeTracker();
+  await tracker.initialize();
+  await tracker.checkStakes();
+}
+
+module.exports = { StakeTracker, trackStakes };

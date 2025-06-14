@@ -6,6 +6,59 @@ class TradeSimulator {
   constructor() {
     this.provider = null;
     this.wallet = null;
+  }
+
+  async initialize() {
+    console.log('🔧 Initializing Trade Simulator...');
+    
+    this.provider = new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
+    this.wallet = new ethers.Wallet(config.blockchain.privateKey, this.provider);
+    
+    console.log('✅ Trade Simulator initialized');
+  }
+
+  async runSimulations() {
+    try {
+      console.log('📈 Running trade simulations...');
+      
+      // Mock trade opportunities
+      const opportunities = [
+        { type: 'arbitrage', profitPercent: 3.2, pair: 'DAB/ETH' },
+        { type: 'swap', profitPercent: 1.8, pair: 'VIRTUAL/DAB' }
+      ];
+      
+      for (const opportunity of opportunities) {
+        if (opportunity.profitPercent > config.trading.profitThreshold * 100) {
+          console.log(`🚀 Found profitable ${opportunity.type} opportunity: ${opportunity.profitPercent}% profit on ${opportunity.pair}`);
+          
+          if (!config.trading.simulationOnly) {
+            // Execute actual trade here
+            console.log('💼 Executing trade...');
+          } else {
+            console.log('🧪 Simulation mode - trade not executed');
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.error('❌ Error in trade simulation:', error);
+    }
+  }
+}
+
+async function simulateTrades() {
+  const simulator = new TradeSimulator();
+  await simulator.initialize();
+  await simulator.runSimulations();
+}
+
+module.exports = { TradeSimulator, simulateTrades };
+const config = require('../config');
+
+class TradeSimulator {
+  constructor() {
+    this.provider = null;
+    this.wallet = null;
     this.simulationHistory = [];
     this.profitableOpportunities = [];
   }
