@@ -1,140 +1,54 @@
-
 const { ethers } = require('ethers');
-const config = require('../config');
+const { rpcUrl, walletAddress } = require('../config');
 const stakingAbi = require('../abi/staking.json');
+
+// Replace with actual contract address
+const STAKING_CONTRACT_ADDRESS = process.env.STAKING_CONTRACT || '0xYourStakingContract';
 
 class StakeTracker {
   constructor() {
     this.provider = null;
-    this.wallet = null;
     this.stakingContract = null;
-    this.lastChecked = {};
   }
 
   async initialize() {
     console.log('🔧 Initializing Stake Tracker...');
-    
-    // Setup provider and wallet
-    this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
-    this.wallet = new ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
-    
-    // Initialize staking contract
-    this.stakingContract = new ethers.Contract(
-      process.env.STAKING_CONTRACT,
-      stakingAbi,
-      this.wallet
-    );
+
+    this.provider = new ethers.JsonRpcProvider(rpcUrl);
+    this.stakingContract = new ethers.Contract(STAKING_CONTRACT_ADDRESS, stakingAbi, this.provider);
 
     console.log('✅ Stake Tracker initialized');
   }
 
   async checkStakes() {
     console.log('👀 Checking stakes...');
-    
+
     try {
-      const userAddress = await this.wallet.getAddress();
-      const userStakes = await this.stakingContract.getUserStakes(userAddress);
-      
-      console.log(`📊 Found ${userStakes.length} active stakes:`);
-      
-      for (let i = 0; i < userStakes.length; i++) {
-        const stake = userStakes[i];
-        console.log(`   ${i + 1}. Agent: ${stake.agent}`);
-        console.log(`      Staked: ${ethers.formatEther(stake.amount)} tokens`);
-        console.log(`      Unlock Time: ${new Date(Number(stake.unlockTime) * 1000).toLocaleString()}`);
-        
-        // Check if stake is unlocked
-        const now = Math.floor(Date.now() / 1000);
-        if (Number(stake.unlockTime) <= now) {
-          console.log(`🔓 Stake ${i + 1} is unlocked and ready for claiming!`);
-        } else {
-          const timeLeft = Number(stake.unlockTime) - now;
-          const hoursLeft = Math.floor(timeLeft / 3600);
-          console.log(`🔒 Stake ${i + 1} unlocks in ${hoursLeft} hours`);
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error checking stakes:', error);
-    }
-  }
+      const stakes = await this.stakingContract.getUserStakes(walletAddress);
 
-  async checkPoolStake(poolId) {
-    try {
-      const userAddress = await this.wallet.getAddress();
-      const [stakedAmount, pendingRewards] = await this.stakingContract.getUserStake(userAddress, poolId);
-      
-      console.log(`📊 Pool ${poolId}:`);
-      console.log(`   Staked: ${ethers.formatEther(stakedAmount)} tokens`);
-      console.log(`   Pending Rewards: ${ethers.formatEther(pendingRewards)} tokens`);
-
-      // Check if we should claim rewards
-      if (pendingRewards > ethers.parseEther('0.1')) {
-        console.log(`💰 Pool ${poolId} has claimable rewards, triggering claim...`);
-        await this.claimPoolRewards(poolId);
-      }
-
-      // Check if we should restake
-      if (config.staking.autoRestake && pendingRewards > ethers.parseEther('1')) {
-        console.log(`🔄 Auto-restaking rewards for pool ${poolId}...`);
-        await this.restakeRewards(poolId);
-      }
-
-    } catch (error) {
-      console.error(`❌ Error checking pool ${poolId}:`, error);
-    }
-  }
-
-  async claimPoolRewards(poolId) {
-    try {
-      console.log(`🎯 Claiming rewards for pool ${poolId}...`);
-      
-      const tx = await this.stakingContract.claimRewards(poolId, {
-        gasLimit: config.blockchain.gasLimit,
-        gasPrice: config.blockchain.gasPrice
+      console.log(`🔍 Stakes for wallet ${walletAddress}:`);
+      stakes.forEach(s => {
+        const daysLeft = (Number(s.unlockTime) * 1000 - Date.now()) / (1000 * 60 * 60 * 24);
+        console.log(`• Agent: ${s.agent} | Amount: ${ethers.formatUnits(s.amount, 18)} | Unlocks in: ${daysLeft.toFixed(1)} days`);
       });
 
-      console.log(`📝 Claim transaction sent: ${tx.hash}`);
-      await tx.wait();
-      console.log(`✅ Rewards claimed for pool ${poolId}`);
-
     } catch (error) {
-      console.error(`❌ Error claiming rewards for pool ${poolId}:`, error);
-    }
-  }
-
-  async restakeRewards(poolId) {
-    try {
-      // First claim the rewards
-      await this.claimPoolRewards(poolId);
-      
-      // Then stake them back (this would require additional logic 
-      // to get the claimed amount and stake it)
-      console.log(`🔄 Restaking completed for pool ${poolId}`);
-
-    } catch (error) {
-      console.error(`❌ Error restaking for pool ${poolId}:`, error);
-    }
-  }
-
-  async getPoolInfo(poolId) {
-    try {
-      const [totalStaked, rewardRate, active] = await this.stakingContract.getPoolInfo(poolId);
-      return {
-        totalStaked: ethers.formatEther(totalStaked),
-        rewardRate: rewardRate.toString(),
-        active
-      };
-    } catch (error) {
-      console.error(`❌ Error getting pool info for ${poolId}:`, error);
-      return null;
+      console.error('❌ Error checking stakes:', error);
     }
   }
 }
 
 async function trackStakes() {
-  const tracker = new StakeTracker();
-  await tracker.initialize();
-  await tracker.checkStakes();
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
+  const staking = new ethers.Contract(STAKING_CONTRACT_ADDRESS, stakingAbi, provider);
+
+  const stakes = await staking.getUserStakes(walletAddress);
+
+  console.log(`🔍 Stakes for wallet ${walletAddress}:`);
+  stakes.forEach(s => {
+    const daysLeft = (Number(s.unlockTime) * 1000 - Date.now()) / (1000 * 60 * 60 * 24);
+    console.log(`• Agent: ${s.agent} | Amount: ${ethers.formatUnits(s.amount, 18)} | Unlocks in: ${daysLeft.toFixed(1)} days`);
+  });
 }
 
 module.exports = { StakeTracker, trackStakes };

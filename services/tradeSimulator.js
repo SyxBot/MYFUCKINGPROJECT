@@ -5,59 +5,6 @@ class TradeSimulator {
   constructor() {
     this.provider = null;
     this.wallet = null;
-  }
-
-  async initialize() {
-    console.log('🔧 Initializing Trade Simulator...');
-
-    this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
-    this.wallet = new ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
-
-    console.log('✅ Trade Simulator initialized');
-  }
-
-  async runSimulations() {
-    try {
-      console.log('📈 Running trade simulations...');
-
-      // Mock trade opportunities
-      const opportunities = [
-        { type: 'arbitrage', profitPercent: 3.2, pair: 'DAB/ETH' },
-        { type: 'swap', profitPercent: 1.8, pair: 'VIRTUAL/DAB' }
-      ];
-
-      for (const opportunity of opportunities) {
-        if (opportunity.profitPercent > 5) { // 5% profit threshold
-          console.log(`🚀 Found profitable ${opportunity.type} opportunity: ${opportunity.profitPercent}% profit on ${opportunity.pair}`);
-
-          const simulationOnly = true; // Set to false for real trading
-          if (!simulationOnly) {
-            // Execute actual trade here
-            console.log('💼 Executing trade...');
-          } else {
-            console.log('🧪 Simulation mode - trade not executed');
-          }
-        }
-      }
-
-    } catch (error) {
-      console.error('❌ Error in trade simulation:', error);
-    }
-  }
-}
-
-async function simulateTrades() {
-  const simulator = new TradeSimulator();
-  await simulator.initialize();
-  await simulator.runSimulations();
-}
-
-module.exports = { TradeSimulator, simulateTrades };
-
-class TradeSimulator {
-  constructor() {
-    this.provider = null;
-    this.wallet = null;
     this.simulationHistory = [];
     this.profitableOpportunities = [];
   }
@@ -72,7 +19,8 @@ class TradeSimulator {
   }
 
   async runSimulations() {
-    if (!config.trading.enabled) {
+    if (!config.trading?.enabled) {
+      console.log('📈 Trade simulation disabled in config');
       return;
     }
 
@@ -107,7 +55,7 @@ class TradeSimulator {
         if (sellExchange.price > buyExchange.price) {
           const profitPercent = ((sellExchange.price - buyExchange.price) / buyExchange.price) * 100;
 
-          if (profitPercent > 5) {
+          if (profitPercent > 2) { // 2% profit threshold
             const opportunity = {
               type: 'arbitrage',
               buyExchange: buyExchange.exchange,
@@ -120,10 +68,6 @@ class TradeSimulator {
 
             this.profitableOpportunities.push(opportunity);
             console.log(`💡 Arbitrage opportunity: Buy ${buyExchange.exchange} at $${buyExchange.price}, Sell ${sellExchange.exchange} at $${sellExchange.price} (${profitPercent.toFixed(2)}% profit)`);
-
-            if (!true) {
-              await this.executeArbitrage(opportunity);
-            }
           }
         }
       }
@@ -143,7 +87,7 @@ class TradeSimulator {
     for (const pair of tokenPairs) {
       const simulatedProfit = this.calculateSwapProfit(pair);
 
-      if (simulatedProfit > config.trading.profitThreshold) {
+      if (simulatedProfit > 0.02) { // 2% threshold
         const opportunity = {
           type: 'swap',
           tokenPair: `${pair.from}/${pair.to}`,
@@ -164,35 +108,6 @@ class TradeSimulator {
     const baseProfitability = Math.random() * 0.1; // 0-10% base
     const trendMultiplier = pair.trending === 'up' ? 1.5 : pair.trending === 'down' ? 0.5 : 1;
     return baseProfitability * trendMultiplier;
-  }
-
-  async executeArbitrage(opportunity) {
-    try {
-      console.log(`🚀 Executing arbitrage trade: ${opportunity.buyExchange} → ${opportunity.sellExchange}`);
-
-      // Mock execution (replace with actual DEX integration)
-      const tradeAmount = ethers.parseEther(config.trading.maxTradeAmount);
-      console.log(`💰 Trade amount: ${ethers.formatEther(tradeAmount)} tokens`);
-
-      // Simulate transaction fees and slippage
-      const fees = tradeAmount * BigInt(30) / BigInt(10000); // 0.3% fees
-      const slippage = tradeAmount * BigInt(Math.floor(config.trading.slippageTolerance * 10000)) / BigInt(10000);
-      const netProfit = tradeAmount * BigInt(Math.floor(parseFloat(opportunity.profitPercent) * 100)) / BigInt(10000) - fees - slippage;
-
-      console.log(`📊 Estimated net profit: ${ethers.formatEther(netProfit)} tokens`);
-
-      // Log the simulated trade
-      this.simulationHistory.push({
-        ...opportunity,
-        executed: true,
-        netProfit: ethers.formatEther(netProfit),
-        fees: ethers.formatEther(fees),
-        slippage: ethers.formatEther(slippage)
-      });
-
-    } catch (error) {
-      console.error('❌ Error executing arbitrage:', error);
-    }
   }
 
   async analyzeProfitability() {
@@ -227,4 +142,10 @@ class TradeSimulator {
   }
 }
 
-module.exports = TradeSimulator;
+async function simulateTrades() {
+  const simulator = new TradeSimulator();
+  await simulator.initialize();
+  await simulator.runSimulations();
+}
+
+module.exports = { TradeSimulator, simulateTrades };
