@@ -1,41 +1,19 @@
-
 [
   {
-    "name": "getUserStakes",
+    "name": "stakedAmountOf",
     "type": "function",
     "stateMutability": "view",
-    "inputs": [{ "name": "user", "type": "address" }],
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address"
+      }
+    ],
     "outputs": [
       {
-        "components": [
-          { "name": "agent", "type": "address" },
-          { "name": "amount", "type": "uint256" },
-          { "name": "unlockTime", "type": "uint256" }
-        ],
-        "type": "tuple[]"
+        "name": "",
+        "type": "uint256"
       }
     ]
-  },
-  {
-    "constant": false,
-    "inputs": [{"name": "poolId", "type": "uint256"}],
-    "name": "claimRewards",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [{"name": "poolId", "type": "uint256"}],
-    "name": "getPoolInfo",
-    "outputs": [
-      {"name": "totalStaked", "type": "uint256"},
-      {"name": "rewardRate", "type": "uint256"},
-      {"name": "active", "type": "bool"}
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
   }
 ]

@@ -2,53 +2,18 @@ const { ethers } = require('ethers');
 const { rpcUrl, walletAddress } = require('../config');
 const stakingAbi = require('../abi/staking.json');
 
-// Virtuals staking contract on Base mainnet
-const STAKING_CONTRACT_ADDRESS = process.env.STAKING_CONTRACT || '0x60a203ddcde45fbfb325bdeea93824b5726b4df8';
-
-class StakeTracker {
-  constructor() {
-    this.provider = null;
-    this.stakingContract = null;
-  }
-
-  async initialize() {
-    console.log('🔧 Initializing Stake Tracker...');
-
-    this.provider = new ethers.JsonRpcProvider(rpcUrl);
-    this.stakingContract = new ethers.Contract(STAKING_CONTRACT_ADDRESS, stakingAbi, this.provider);
-
-    console.log('✅ Stake Tracker initialized');
-  }
-
-  async checkStakes() {
-    console.log('👀 Checking stakes...');
-
-    try {
-      const stakes = await this.stakingContract.getUserStakes(walletAddress);
-
-      console.log(`🔍 Stakes for wallet ${walletAddress}:`);
-      stakes.forEach(s => {
-        const daysLeft = (Number(s.unlockTime) * 1000 - Date.now()) / (1000 * 60 * 60 * 24);
-        console.log(`• Agent: ${s.agent} | Amount: ${ethers.formatUnits(s.amount, 18)} | Unlocks in: ${daysLeft.toFixed(1)} days`);
-      });
-
-    } catch (error) {
-      console.error('❌ Error checking stakes:', error);
-    }
-  }
-}
+const STAKING_CONTRACT_ADDRESS = '0x60a203ddcDE45fbfb325bdeEA93824B5726b4dF8';
 
 async function trackStakes() {
-  const provider = new ethers.JsonRpcProvider(rpcUrl);
-  const staking = new ethers.Contract(STAKING_CONTRACT_ADDRESS, stakingAbi, provider);
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const staking = new ethers.Contract(STAKING_CONTRACT_ADDRESS, stakingAbi, provider);
 
-  const stakes = await staking.getUserStakes(walletAddress);
-
-  console.log(`🔍 Stakes for wallet ${walletAddress}:`);
-  stakes.forEach(s => {
-    const daysLeft = (Number(s.unlockTime) * 1000 - Date.now()) / (1000 * 60 * 60 * 24);
-    console.log(`• Agent: ${s.agent} | Amount: ${ethers.formatUnits(s.amount, 18)} | Unlocks in: ${daysLeft.toFixed(1)} days`);
-  });
+    try {
+        const stakedAmount = await staking.stakedAmountOf(walletAddress);
+        console.log(`🪙 Wallet ${walletAddress} has staked: ${ethers.formatUnits(stakedAmount, 18)} tokens`);
+    } catch (error) {
+        console.error('❌ Error fetching staked amount:', error);
+    }
 }
 
-module.exports = { StakeTracker, trackStakes };
+module.exports = { trackStakes };
