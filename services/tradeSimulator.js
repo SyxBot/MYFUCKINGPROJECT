@@ -27,10 +27,11 @@ class TradeSimulator {
       ];
 
       for (const opportunity of opportunities) {
-        if (opportunity.profitPercent > config.trading.profitThreshold * 100) {
+        if (opportunity.profitPercent > 5) { // 5% profit threshold
           console.log(`🚀 Found profitable ${opportunity.type} opportunity: ${opportunity.profitPercent}% profit on ${opportunity.pair}`);
 
-          if (!true) { // Always simulate for now
+          const simulationOnly = true; // Set to false for real trading
+          if (!simulationOnly) {
             // Execute actual trade here
             console.log('💼 Executing trade...');
           } else {
@@ -107,7 +108,7 @@ class TradeSimulator {
         if (sellExchange.price > buyExchange.price) {
           const profitPercent = ((sellExchange.price - buyExchange.price) / buyExchange.price) * 100;
 
-          if (profitPercent > config.trading.profitThreshold * 100) {
+          if (profitPercent > 5) {
             const opportunity = {
               type: 'arbitrage',
               buyExchange: buyExchange.exchange,

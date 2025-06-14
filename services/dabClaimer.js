@@ -12,8 +12,8 @@ class DabClaimer {
   async initialize() {
     console.log('🔧 Initializing DAB Claimer...');
 
-    this.provider = new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
-    this.wallet = new ethers.Wallet(config.blockchain.privateKey, this.provider);
+    this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
+    this.wallet = new ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
 
     // Basic ERC20 ABI for DAB token interactions
     const erc20Abi = [
@@ -24,7 +24,7 @@ class DabClaimer {
     ];
 
     this.dabContract = new ethers.Contract(
-      config.blockchain.dabTokenContract,
+      process.env.DAB_TOKEN_CONTRACT,
       erc20Abi,
       this.wallet
     );
@@ -38,7 +38,8 @@ class DabClaimer {
     try {
       // Check if enough time has passed since last claim
       const now = Date.now();
-      if (now - this.lastClaimTime < config.dab.claimInterval) {
+      const claimInterval = 3600000; // 1 hour
+      if (now - this.lastClaimTime < claimInterval) {
         console.log('⏰ Not enough time passed since last claim');
         return;
       }
