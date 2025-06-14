@@ -53,7 +53,6 @@ async function simulateTrades() {
 }
 
 module.exports = { TradeSimulator, simulateTrades };
-const config = require('../config');
 
 class TradeSimulator {
   constructor() {

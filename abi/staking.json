@@ -1,23 +1,20 @@
+
 [
   {
-    "constant": true,
-    "inputs": [{"name": "user", "type": "address"}],
     "name": "getUserStakes",
+    "type": "function",
+    "stateMutability": "view",
+    "inputs": [{ "name": "user", "type": "address" }],
     "outputs": [
       {
         "components": [
-          {"name": "agentName", "type": "string"},
-          {"name": "amountStaked", "type": "uint256"},
-          {"name": "lockColor", "type": "uint8"},
-          {"name": "unlockTimestamp", "type": "uint256"}
+          { "name": "agent", "type": "address" },
+          { "name": "amount", "type": "uint256" },
+          { "name": "unlockTime", "type": "uint256" }
         ],
-        "name": "",
         "type": "tuple[]"
       }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
+    ]
   },
   {
     "constant": false,

@@ -39,17 +39,16 @@ class StakeTracker {
       
       for (let i = 0; i < userStakes.length; i++) {
         const stake = userStakes[i];
-        console.log(`   ${i + 1}. Agent: ${stake.agentName}`);
-        console.log(`      Staked: ${ethers.formatEther(stake.amountStaked)} tokens`);
-        console.log(`      Lock Color: ${stake.lockColor}`);
-        console.log(`      Unlock Time: ${new Date(Number(stake.unlockTimestamp) * 1000).toLocaleString()}`);
+        console.log(`   ${i + 1}. Agent: ${stake.agent}`);
+        console.log(`      Staked: ${ethers.formatEther(stake.amount)} tokens`);
+        console.log(`      Unlock Time: ${new Date(Number(stake.unlockTime) * 1000).toLocaleString()}`);
         
         // Check if stake is unlocked
         const now = Math.floor(Date.now() / 1000);
-        if (Number(stake.unlockTimestamp) <= now) {
+        if (Number(stake.unlockTime) <= now) {
           console.log(`🔓 Stake ${i + 1} is unlocked and ready for claiming!`);
         } else {
-          const timeLeft = Number(stake.unlockTimestamp) - now;
+          const timeLeft = Number(stake.unlockTime) - now;
           const hoursLeft = Math.floor(timeLeft / 3600);
           console.log(`🔒 Stake ${i + 1} unlocks in ${hoursLeft} hours`);
         }
