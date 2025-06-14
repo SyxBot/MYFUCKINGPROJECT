@@ -12,61 +12,8 @@ class DabClaimer {
   async initialize() {
     console.log('🔧 Initializing DAB Claimer...');
 
-    this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
-    this.wallet = new ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
-
-    // Initialize DAB token contract (you'll need the ABI)
-    // this.dabContract = new ethers.Contract(config.blockchain.dabTokenContract, dabAbi, this.wallet);
-
-    console.log('✅ DAB Claimer initialized');
-  }
-
-  async claimRewards() {
-    try {
-      console.log('💎 Checking DAB rewards...');
-
-      // Mock implementation - replace with actual contract calls
-      const pendingRewards = ethers.parseEther('5.0'); // Mock 5 DAB tokens
-
-      if (pendingRewards > ethers.parseEther(config.dab.autoClaimThreshold)) {
-        console.log('🎯 Claiming DAB rewards...');
-        // const tx = await this.dabContract.claimRewards();
-        // await tx.wait();
-        console.log('✅ DAB rewards claimed successfully');
-        return true;
-      }
-
-      console.log('📊 No DAB rewards to claim yet');
-      return false;
-    } catch (error) {
-      console.error('❌ Error claiming DAB rewards:', error);
-      return false;
-    }
-  }
-}
-
-async function autoClaimDAB() {
-  const claimer = new DabClaimer();
-  await claimer.initialize();
-  await claimer.claimRewards();
-}
-
-module.exports = { DabClaimer, autoClaimDAB };
-
-
-class DabClaimer {
-  constructor() {
-    this.provider = null;
-    this.wallet = null;
-    this.dabContract = null;
-    this.lastClaimTime = 0;
-  }
-
-  async initialize() {
-    console.log('🔧 Initializing DAB Claimer...');
-
-    this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
-    this.wallet = new ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
+    this.provider = new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
+    this.wallet = new ethers.Wallet(config.blockchain.privateKey, this.provider);
 
     // Basic ERC20 ABI for DAB token interactions
     const erc20Abi = [
@@ -157,4 +104,10 @@ class DabClaimer {
   }
 }
 
-module.exports = DabClaimer;
+async function autoClaimDAB() {
+  const claimer = new DabClaimer();
+  await claimer.initialize();
+  await claimer.claimRewards();
+}
+
+module.exports = { DabClaimer, autoClaimDAB };

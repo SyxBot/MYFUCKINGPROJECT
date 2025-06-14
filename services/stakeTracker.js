@@ -15,12 +15,12 @@ class StakeTracker {
     console.log('🔧 Initializing Stake Tracker...');
     
     // Setup provider and wallet
-    this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
-    this.wallet = new ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
+    this.provider = new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
+    this.wallet = new ethers.Wallet(config.blockchain.privateKey, this.provider);
     
     // Initialize staking contract
     this.stakingContract = new ethers.Contract(
-      process.env.STAKING_CONTRACT,
+      config.blockchain.stakingContract,
       stakingAbi,
       this.wallet
     );
@@ -32,8 +32,27 @@ class StakeTracker {
     console.log('👀 Checking stakes...');
     
     try {
-      for (const poolId of config.staking.stakingPoolIds) {
-        await this.checkPoolStake(poolId);
+      const userAddress = await this.wallet.getAddress();
+      const userStakes = await this.stakingContract.getUserStakes(userAddress);
+      
+      console.log(`📊 Found ${userStakes.length} active stakes:`);
+      
+      for (let i = 0; i < userStakes.length; i++) {
+        const stake = userStakes[i];
+        console.log(`   ${i + 1}. Agent: ${stake.agentName}`);
+        console.log(`      Staked: ${ethers.formatEther(stake.amountStaked)} tokens`);
+        console.log(`      Lock Color: ${stake.lockColor}`);
+        console.log(`      Unlock Time: ${new Date(Number(stake.unlockTimestamp) * 1000).toLocaleString()}`);
+        
+        // Check if stake is unlocked
+        const now = Math.floor(Date.now() / 1000);
+        if (Number(stake.unlockTimestamp) <= now) {
+          console.log(`🔓 Stake ${i + 1} is unlocked and ready for claiming!`);
+        } else {
+          const timeLeft = Number(stake.unlockTimestamp) - now;
+          const hoursLeft = Math.floor(timeLeft / 3600);
+          console.log(`🔒 Stake ${i + 1} unlocks in ${hoursLeft} hours`);
+        }
       }
     } catch (error) {
       console.error('❌ Error checking stakes:', error);
