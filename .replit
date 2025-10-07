@@ -1,5 +1,5 @@
 entrypoint = "index.js"
-modules = ["nodejs-22"]
+modules = ["nodejs-22", "python-base-3.13"]
 hidden = [".config", "package-lock.json"]
 
 [gitHubImport]
@@ -17,10 +17,17 @@ ignorePorts = false
 runButton = "Start Farmer Bot"
 
 [[workflows.workflow]]
-name = "Start Farmer Bot"
-author = 41755140
+name = "Start"
 mode = "sequential"
+author = 41755140
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node index.js"
+args = "Npm run start"
+
+[agent]
+expertMode = true
+
+[[ports]]
+localPort = 5000
+externalPort = 80
