@@ -1,0 +1,320 @@
+*** Begin Patch
+*** Update File: server/services/cryptoDataService.ts
+@@
+ export class CryptoDataService {
++      // Simple in-memory caches for API responses to smooth out burst load. Each cache stores
++      // the fetched tokens and a timestamp; entries expire after cacheTTL milliseconds.
++      private dexCache: { tokens: Token[]; timestamp: number } | null = null;
++      private birdeyeCache: { tokens: Token[]; timestamp: number } | null = null;
++      private coinGeckoCache: { tokens: Token[]; timestamp: number } | null = null;
++      // Cache time-to-live in milliseconds (e.g. 30 seconds)
++      private readonly cacheTTL = 30_000;
++
++      /**
++       * Convert any value into a number, returning 0 for null/undefined/NaN.
++       */
++      private parseNumber(value: any): number {
++        const n = Number(value ?? 0);
++        return isNaN(n) ? 0 : n;
++      }
++
++      /**
++       * Wrap a promise-returning function with simple retry and jittered backoff.
++       * Attempts up to {@code attempts} times before rethrowing the final error.
++       */
++      private async retryRequest<T>(fn: () => Promise<T>, attempts = 2): Promise<T> {
++        for (let i = 0; i < attempts; i++) {
++          try {
++            return await fn();
++          } catch (error) {
++            // On last attempt propagate the error
++            if (i === attempts - 1) {
++              throw error;
++            }
++            // Brief jittered backoff before retrying
++            await new Promise(resolve =>
++              setTimeout(resolve, 200 + Math.floor(Math.random() * 300)),
++            );
++          }
++        }
++        // Fallback; should never reach here
++        throw new Error('Retry failed');
++      }
+@@
+       private async fetchFromDEXScreener(): Promise<Token[]> {
+-        try {
+-          const response = await 
+-          axios.get(`${this.dexScreenerBaseUrl}/tokens/solana`, {
+-            timeout: 10000,
+-          });
+-
+-          await storage.updateDataSourceStatus('DEXScreener', 'active');
+-
+-          if (!response.data?.pairs) {
+-            return [];
+-          }
+-
+-          return response.data.pairs.slice(0, 50).map((pair: DEXScreenerToken) 
+- => ({
+-            symbol: pair.baseToken.symbol,
+-            name: pair.baseToken.name,
+-            mint: pair.baseToken.address,
+-            decimals: 9, // Default for most Solana tokens
+-            price: pair.priceUsd,
+-            volume24h: pair.volume.h24.toString(),
+-            priceChange24h: pair.priceChange.h24.toString(),
+-            marketCap: pair.marketCap?.toString() || null,
+-            holders: null,
+-            alphaScore: this.calculateAlphaScore(pair.volume.h24, 
+- pair.priceChange.h24, pair.marketCap),
+-          }));
+-        } catch (error) {
+-          await storage.updateDataSourceStatus('DEXScreener', 'error', error 
+- instanceof Error ? error.message : 'Unknown error');
+-          throw error;
+-        }
++        const now = Date.now();
++        // Return cached tokens if cache is valid
++        if (this.dexCache && now - this.dexCache.timestamp < this.cacheTTL) {
++          await storage.updateDataSourceStatus('DEXScreener', 'active');
++          return this.dexCache.tokens;
++        }
++
++        try {
++          // Use retry helper to mitigate transient network failures
++          const response = await this.retryRequest(() =>
++            axios.get(`${this.dexScreenerBaseUrl}/tokens/solana`, {
++              timeout: 10000,
++            }),
++          );
++
++          await storage.updateDataSourceStatus('DEXScreener', 'active');
++
++          const pairs = response.data?.pairs;
++          if (!pairs) {
++            return [];
++          }
++
++          const tokens = pairs.slice(0, 50).map((pair: DEXScreenerToken) => {
++            const volume = this.parseNumber(pair.volume?.h24);
++            const priceChange = this.parseNumber(pair.priceChange?.h24);
++            const marketCapNum = this.parseNumber(pair.marketCap);
++            return {
++              symbol: pair.baseToken.symbol,
++              name: pair.baseToken.name,
++              mint: pair.baseToken.address,
++              decimals: 9, // Default for most Solana tokens
++              price: this.parseNumber(pair.priceUsd).toString(),
++              volume24h: volume.toString(),
++              priceChange24h: priceChange.toString(),
++              marketCap: marketCapNum ? marketCapNum.toString() : null,
++              holders: null,
++              alphaScore: this.calculateAlphaScore(volume, priceChange, marketCapNum),
++            };
++          });
++
++          // Cache tokens for future calls
++          this.dexCache = { tokens, timestamp: now };
++
++          return tokens;
++        } catch (error) {
++          await storage.updateDataSourceStatus(
++            'DEXScreener',
++            'error',
++            error instanceof Error ? error.message : 'Unknown error',
++          );
++          throw error;
++        }
+       }
+@@
+       private async fetchFromBirdeye(): Promise<Token[]> {
+-        try {
+-          const apiKey = process.env.BIRDEYE_API_KEY || 
+-          process.env.VITE_BIRDEYE_API_KEY || '';
+-
+-          const response = await axios.get(`${this.birdeyeBaseUrl}/tokenlist`, {
+-            headers: {
+-              'X-API-KEY': apiKey,
+-            },
+-            params: {
+-              sort_by: 'v24hUSD',
+-              sort_type: 'desc',
+-              offset: 0,
+-              limit: 50,
+-            },
+-            timeout: 10000,
+-          });
+-
+-          await storage.updateDataSourceStatus('Birdeye', 'active');
+-
+-          if (!response.data?.data?.tokens) {
+-            return [];
+-          }
+-
+-          return response.data.data.tokens.map((token: BirdeyeToken) => ({
+-            symbol: token.symbol,
+-            name: token.name,
+-            mint: token.address,
+-            decimals: token.decimals,
+-            price: token.price.toString(),
+-            volume24h: token.volume24h.toString(),
+-            priceChange24h: token.priceChange24h.toString(),
+-            marketCap: token.marketCap?.toString() || null,
+-            holders: token.holders || null,
+-            alphaScore: this.calculateAlphaScore(token.volume24h, 
+- token.priceChange24h, token.marketCap),
+-          }));
+-        } catch (error) {
+-          await storage.updateDataSourceStatus('Birdeye', 'warning', 'Using 
+- fallback data');
+-          return [];
+-        }
++        const now = Date.now();
++        if (this.birdeyeCache && now - this.birdeyeCache.timestamp < this.cacheTTL) {
++          await storage.updateDataSourceStatus('Birdeye', 'active');
++          return this.birdeyeCache.tokens;
++        }
++
++        const apiKey =
++          process.env.BIRDEYE_API_KEY || process.env.VITE_BIRDEYE_API_KEY || '';
++
++        try {
++          const response = await this.retryRequest(() =>
++            axios.get(`${this.birdeyeBaseUrl}/tokenlist`, {
++              headers: {
++                'X-API-KEY': apiKey,
++              },
++              params: {
++                sort_by: 'v24hUSD',
++                sort_type: 'desc',
++                offset: 0,
++                limit: 50,
++              },
++              timeout: 10000,
++            }),
++          );
++
++          await storage.updateDataSourceStatus('Birdeye', 'active');
++
++          const list = response.data?.data?.tokens;
++          if (!list) {
++            return [];
++          }
++
++          const tokens = list.map((token: BirdeyeToken) => {
++            const price = this.parseNumber(token.price);
++            const volume = this.parseNumber(token.volume24h);
++            const priceChange = this.parseNumber(token.priceChange24h);
++            const marketCapNum = this.parseNumber(token.marketCap);
++            return {
++              symbol: token.symbol,
++              name: token.name,
++              mint: token.address,
++              decimals: token.decimals,
++              price: price.toString(),
++              volume24h: volume.toString(),
++              priceChange24h: priceChange.toString(),
++              marketCap: marketCapNum ? marketCapNum.toString() : null,
++              holders: token.holders ?? null,
++              alphaScore: this.calculateAlphaScore(volume, priceChange, marketCapNum),
++            };
++          });
++
++          this.birdeyeCache = { tokens, timestamp: now };
++          return tokens;
++        } catch (error) {
++          await storage.updateDataSourceStatus('Birdeye', 'warning', 'Using fallback data');
++          return [];
++        }
+       }
+@@
+       private async fetchFromCoinGecko(): Promise<Token[]> {
+-        try {
+-          const response = await 
+-          axios.get(`${this.coinGeckoBaseUrl}/coins/markets`, {
+-            params: {
+-              vs_currency: 'usd',
+-              category: 'solana-ecosystem',
+-              order: 'volume_desc',
+-              per_page: 30,
+-              page: 1,
+-              sparkline: false,
+-            },
+-            timeout: 10000,
+-          });
+-
+-          await storage.updateDataSourceStatus('CoinGecko', 'active');
+-
+-          return response.data.map((token: CoinGeckoToken) => ({
+-            symbol: token.symbol.toUpperCase(),
+-            name: token.name,
+-            mint: token.id, // CoinGecko uses ID instead of mint
+-            decimals: 9,
+-            price: token.current_price.toString(),
+-            volume24h: token.total_volume.toString(),
+-            priceChange24h: token.price_change_percentage_24h.toString(),
+-            marketCap: token.market_cap.toString(),
+-            holders: null,
+-            alphaScore: this.calculateAlphaScore(token.total_volume, 
+- token.price_change_percentage_24h, token.market_cap),
+-          }));
+-        } catch (error) {
+-          await storage.updateDataSourceStatus('CoinGecko', 'error', error 
+- instanceof Error ? error.message : 'Unknown error');
+-          throw error;
+-        }
++        const now = Date.now();
++        if (this.coinGeckoCache && now - this.coinGeckoCache.timestamp < this.cacheTTL) {
++          await storage.updateDataSourceStatus('CoinGecko', 'active');
++          return this.coinGeckoCache.tokens;
++        }
++
++        try {
++          const response = await this.retryRequest(() =>
++            axios.get(`${this.coinGeckoBaseUrl}/coins/markets`, {
++              params: {
++                vs_currency: 'usd',
++                category: 'solana-ecosystem',
++                order: 'volume_desc',
++                per_page: 30,
++                page: 1,
++                sparkline: false,
++              },
++              timeout: 10000,
++            }),
++          );
++
++          await storage.updateDataSourceStatus('CoinGecko', 'active');
++
++          const tokens = response.data.map((token: CoinGeckoToken) => {
++            const price = this.parseNumber(token.current_price);
++            const volume = this.parseNumber(token.total_volume);
++            const priceChange = this.parseNumber(token.price_change_percentage_24h);
++            const marketCapNum = this.parseNumber(token.market_cap);
++            return {
++              symbol: token.symbol.toUpperCase(),
++              name: token.name,
++              mint: token.id, // CoinGecko uses ID instead of mint
++              decimals: 9,
++              price: price.toString(),
++              volume24h: volume.toString(),
++              priceChange24h: priceChange.toString(),
++              marketCap: marketCapNum.toString(),
++              holders: null,
++              alphaScore: this.calculateAlphaScore(volume, priceChange, marketCapNum),
++            };
++          });
++
++          this.coinGeckoCache = { tokens, timestamp: now };
++
++          return tokens;
++        } catch (error) {
++          await storage.updateDataSourceStatus(
++            'CoinGecko',
++            'error',
++            error instanceof Error ? error.message : 'Unknown error',
++          );
++          throw error;
++        }
+       }
+*** End Patch
